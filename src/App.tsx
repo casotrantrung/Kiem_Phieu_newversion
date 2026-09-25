@@ -158,6 +158,7 @@ export default function App() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [showFinalizeModal, setShowFinalizeModal] = useState<boolean>(false);
   const [showPrintModal, setShowPrintModal] = useState<boolean>(false);
+  const [showResetConfirmModal, setShowResetConfirmModal] = useState<boolean>(false);
   const [lastSyncTime, setLastSyncTime] = useState<string>('Chưa kết nối');
 
   const showToast = (msg: string) => {
@@ -201,7 +202,10 @@ export default function App() {
             }
 
             const safeData: ElectionData = {
-              totalCollectedBallots: data.totalCollectedBallots || 44,
+              totalCollectedBallots:
+                typeof data.totalCollectedBallots === 'number'
+                  ? data.totalCollectedBallots
+                  : 44,
               candidates: data.candidates || DEFAULT_CANDIDATES,
               candidateVotes: candidateVotes,
               invalidVotes: data.invalidVotes || 0,
@@ -255,7 +259,7 @@ export default function App() {
 
   // --- CÁC HÀM XỬ LÝ SỰ KIỆN KIỂM PHIẾU ---
   const handleTotalCollectedChange = (newVal: number) => {
-    const val = Math.max(1, newVal);
+    const val = Math.max(0, isNaN(newVal) ? 0 : newVal);
     syncElectionUpdate((prev) => ({
       ...prev,
       totalCollectedBallots: val,
@@ -410,28 +414,32 @@ export default function App() {
     showToast('Đã mở khóa kiểm phiếu!');
   };
 
-  // ĐẶT LẠI TOÀN BỘ PHIẾU VỀ 0
-  const handleResetVotes = () => {
-    if (
-      window.confirm(
-        'Bạn có chắc chắn muốn đặt lại toàn bộ số phiếu về 0 trên TẤT CẢ các thiết bị đang kết nối?'
-      )
-    ) {
-      syncElectionUpdate((prev) => {
-        const resetVotes: Record<string, number> = {};
-        prev.candidates.forEach((c) => {
-          resetVotes[c.id] = 0;
-        });
-        return {
-          ...prev,
-          candidateVotes: resetVotes,
-          invalidVotes: 0,
-          isFinalized: false,
-          finalizedTime: null,
-        };
+  // ĐẶT LẠI TOÀN BỘ SỐ LIỆU VỀ 0
+  const handleResetAllData = (resetTotalBallots: boolean = false) => {
+    syncElectionUpdate((prev) => {
+      const resetVotes: Record<string, number> = {};
+      prev.candidates.forEach((c) => {
+        resetVotes[c.id] = 0;
       });
-      showToast('Đã đặt lại toàn bộ số phiếu về 0!');
-    }
+      return {
+        ...prev,
+        candidateVotes: resetVotes,
+        invalidVotes: 0,
+        totalCollectedBallots: resetTotalBallots ? 0 : prev.totalCollectedBallots,
+        isFinalized: false,
+        finalizedTime: null,
+      };
+    });
+    setShowResetConfirmModal(false);
+    showToast(
+      resetTotalBallots
+        ? 'Đã đặt lại mọi số liệu (phiếu đếm & tổng thu) về 0!'
+        : 'Đã đặt lại toàn bộ số phiếu bầu & phiếu hỏng về 0!'
+    );
+  };
+
+  const handleResetVotes = () => {
+    setShowResetConfirmModal(true);
   };
 
   // NẠP DỮ LIỆU MẪU NHANH
@@ -618,6 +626,15 @@ export default function App() {
                 <RotateCcw className="w-4 h-4 text-slate-500" />
                 <span className="hidden sm:inline">Mẫu</span>
               </button>
+
+              <button
+                onClick={() => setShowResetConfirmModal(true)}
+                title="Đặt lại toàn bộ số liệu về 0"
+                className="p-1.5 sm:px-2.5 sm:py-1.5 text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-lg transition-colors flex items-center gap-1 border border-rose-200 active:scale-95"
+              >
+                <RotateCcw className="w-4 h-4 text-rose-600" />
+                <span className="hidden sm:inline">Reset về 0</span>
+              </button>
             </div>
           </div>
         </div>
@@ -692,11 +709,12 @@ export default function App() {
                 )}
 
                 <button
-                  onClick={handleResetVotes}
-                  className="p-2 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-xl border border-slate-200 transition-colors shrink-0"
-                  title="Đặt lại toàn bộ số phiếu về 0"
+                  onClick={() => setShowResetConfirmModal(true)}
+                  className="px-3 py-2 text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-xl border border-rose-200 transition-all flex items-center gap-1.5 shrink-0 active:scale-95 shadow-xs"
+                  title="Đặt lại toàn bộ số liệu về 0"
                 >
-                  <RotateCcw className="w-4 h-4" />
+                  <RotateCcw className="w-3.5 h-3.5 text-rose-600" />
+                  <span>Reset về 0</span>
                 </button>
               </div>
             </div>
@@ -987,6 +1005,14 @@ export default function App() {
               </div>
 
               <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowResetConfirmModal(true)}
+                  className="w-full sm:w-auto px-3.5 py-2 text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-xs active:scale-95"
+                  title="Đặt lại toàn bộ số liệu về 0"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 text-rose-600" />
+                  <span>Reset về 0</span>
+                </button>
                 <button
                   onClick={() => setShowPrintModal(true)}
                   className="w-full sm:w-auto px-3.5 py-2 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl transition-colors flex items-center justify-center gap-1.5 shadow-xs"
@@ -1507,6 +1533,88 @@ export default function App() {
                 className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-xs"
               >
                 Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          MODAL: XÁC NHẬN RESET SỐ LIỆU VỀ 0
+      ========================================================================= */}
+      {showResetConfirmModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-4 sm:p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
+              <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                <RotateCcw className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-base font-bold text-slate-900 leading-tight">
+                  Đặt Lại Mọi Số Liệu Về 0
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5 truncate">
+                  Đồng bộ tức thì lên tất cả các thiết bị qua Firebase
+                </p>
+              </div>
+            </div>
+
+            <div className="py-4 text-xs space-y-3 text-slate-600">
+              <p className="font-medium text-slate-800">
+                Bạn có chắc chắn muốn đặt lại các số liệu kiểm phiếu về 0 không?
+              </p>
+
+              <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 space-y-2 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-600">Số phiếu {electionData.candidates.length} ứng cử viên:</span>
+                  <span className="font-bold text-rose-600 font-mono">→ 0 phiếu</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-600">Số phiếu không hợp lệ:</span>
+                  <span className="font-bold text-rose-600 font-mono">→ 0 phiếu</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-600">Trạng thái khóa:</span>
+                  <span className="font-bold text-emerald-600 font-mono">Mở khóa</span>
+                </div>
+              </div>
+
+              <div className="text-[11px] text-amber-800 bg-amber-50 p-2.5 rounded-xl border border-amber-200 flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <span className="leading-relaxed">
+                  Lưu ý: Thao tác này sẽ áp dụng ngay lập tức cho tất cả mọi người đang mở ứng dụng này.
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2 pt-3 border-t border-slate-100">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleResetAllData(false)}
+                  className="py-2.5 px-3 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all"
+                  title="Đặt lại số phiếu bầu và phiếu hỏng về 0, giữ nguyên tổng số phiếu thu"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Reset phiếu (Giữ tổng thu)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleResetAllData(true)}
+                  className="py-2.5 px-3 bg-slate-900 hover:bg-black active:scale-95 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all"
+                  title="Đặt lại tất cả số liệu kể cả Tổng phiếu thu được về 0"
+                >
+                  <span>Reset TOÀN BỘ về 0</span>
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowResetConfirmModal(false)}
+                className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-xs transition-colors"
+              >
+                Hủy bỏ
               </button>
             </div>
           </div>
