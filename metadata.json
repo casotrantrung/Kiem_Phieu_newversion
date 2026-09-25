@@ -1,0 +1,7 @@
+{
+  "name": "Hệ thống Quản lý & Kiểm phiếu Trực quan",
+  "description": "Ứng dụng kiểm phiếu theo khu vực theo thời gian thực với bảng thống kê và biểu đồ giám sát.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
